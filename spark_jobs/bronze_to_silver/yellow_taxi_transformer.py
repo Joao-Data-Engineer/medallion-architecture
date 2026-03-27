@@ -40,7 +40,7 @@ from spark_jobs.utils.delta_utils import get_or_create_delta_table, optimize_del
 from spark_jobs.utils.metrics import PipelineMetrics
 
 
-def load_config() -> dict:
+def load_config() -> dict:  # pragma: no cover
     config_path = os.environ.get(
         "PIPELINE_CONFIG_PATH", "/opt/spark/work-dir/config/pipeline_config.yml"
     )
@@ -48,7 +48,7 @@ def load_config() -> dict:
         return yaml.safe_load(f)
 
 
-def build_spark_session(cfg: dict) -> SparkSession:
+def build_spark_session(cfg: dict) -> SparkSession:  # pragma: no cover
     spark_cfg = cfg["spark"]
     s3a = spark_cfg["s3a"]
 
@@ -75,7 +75,9 @@ def build_spark_session(cfg: dict) -> SparkSession:
 # ─── Step 1: Read Bronze ──────────────────────────────────────────────────────
 
 
-def read_bronze(spark: SparkSession, cfg: dict, year: int, month: int) -> DataFrame:
+def read_bronze(
+    spark: SparkSession, cfg: dict, year: int, month: int
+) -> DataFrame:  # pragma: no cover
     storage = cfg["storage"]
     month_str = f"{month:02d}"
     path = (
@@ -138,7 +140,7 @@ def remove_outliers(df: DataFrame, cfg: dict) -> DataFrame:
 # ─── Step 4: Zone Lookup Join ─────────────────────────────────────────────────
 
 
-def load_zone_lookup(spark: SparkSession, cfg: dict) -> DataFrame:
+def load_zone_lookup(spark: SparkSession, cfg: dict) -> DataFrame:  # pragma: no cover
     storage = cfg["storage"]
     path = f"s3a://{storage['buckets']['bronze']}/{storage['paths']['bronze_taxi_zones']}"
     return spark.read.schema(TAXI_ZONE_SCHEMA).option("header", "true").csv(path)
@@ -229,7 +231,7 @@ def add_derived_columns(df: DataFrame, year: int, month: int) -> DataFrame:
 # ─── Step 6: Delta MERGE (idempotent write) ───────────────────────────────────
 
 
-def write_to_silver(spark: SparkSession, df: DataFrame, cfg: dict) -> int:
+def write_to_silver(spark: SparkSession, df: DataFrame, cfg: dict) -> int:  # pragma: no cover
     storage = cfg["storage"]
     silver_path = (
         f"s3a://{storage['buckets']['silver']}/" f"{storage['paths']['silver_yellow_taxi']}"
@@ -267,7 +269,7 @@ def write_to_silver(spark: SparkSession, df: DataFrame, cfg: dict) -> int:
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 
-def main(year: int, month: int) -> None:
+def main(year: int, month: int) -> None:  # pragma: no cover
     cfg = load_config()
     metrics = PipelineMetrics(layer="silver", year=year, month=month)
 

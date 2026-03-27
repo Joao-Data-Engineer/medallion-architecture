@@ -22,7 +22,7 @@ from pyspark.sql.types import (
 BRONZE_YELLOW_TAXI_SCHEMA = StructType(
     [
         StructField("VendorID", IntegerType(), nullable=True),
-        StructField("tpep_pickup_datetime", TimestampType(), nullable=False),
+        StructField("tpep_pickup_datetime", TimestampType(), nullable=True),
         StructField("tpep_dropoff_datetime", TimestampType(), nullable=True),
         StructField("passenger_count", DoubleType(), nullable=True),
         StructField("trip_distance", DoubleType(), nullable=True),

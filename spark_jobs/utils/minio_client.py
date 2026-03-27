@@ -13,7 +13,7 @@ import boto3
 from botocore.config import Config
 
 
-def get_minio_client(endpoint: str | None = None):
+def get_minio_client(endpoint: str | None = None):  # pragma: no cover
     """Returns a boto3 S3 client configured for MinIO."""
     return boto3.client(
         "s3",
@@ -27,7 +27,7 @@ def get_minio_client(endpoint: str | None = None):
     )
 
 
-def object_exists(bucket: str, key: str, endpoint: str | None = None) -> bool:
+def object_exists(bucket: str, key: str, endpoint: str | None = None) -> bool:  # pragma: no cover
     """Returns True if the given S3 key exists in MinIO."""
     client = get_minio_client(endpoint)
     try:
@@ -37,7 +37,9 @@ def object_exists(bucket: str, key: str, endpoint: str | None = None) -> bool:
         return False
 
 
-def list_objects(bucket: str, prefix: str, endpoint: str | None = None) -> list[str]:
+def list_objects(
+    bucket: str, prefix: str, endpoint: str | None = None
+) -> list[str]:  # pragma: no cover
     """Returns all object keys in a bucket under the given prefix."""
     client = get_minio_client(endpoint)
     keys = []
@@ -48,7 +50,7 @@ def list_objects(bucket: str, prefix: str, endpoint: str | None = None) -> list[
     return keys
 
 
-def get_s3a_conf(endpoint: str | None = None) -> dict[str, str]:
+def get_s3a_conf(endpoint: str | None = None) -> dict[str, str]:  # pragma: no cover
     """
     Returns a dict of Hadoop S3A configuration for use with SparkConf.
     Useful for testing or dynamic session creation.

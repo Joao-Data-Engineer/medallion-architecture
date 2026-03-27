@@ -41,7 +41,8 @@ class TestGetOrCreateDeltaTable:
         path = f"file://{tmp_path}/test_readable"
         get_or_create_delta_table(spark, self.SCHEMA, path, partition_cols=[])
         df = spark.read.format("delta").load(path)
-        assert df.schema == self.SCHEMA
+        # Delta Lake may adjust nullable flags; compare column names and types only
+        assert {f.name: f.dataType for f in df.schema} == {f.name: f.dataType for f in self.SCHEMA}
 
 
 @pytest.mark.unit

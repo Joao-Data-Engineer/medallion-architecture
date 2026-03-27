@@ -28,7 +28,10 @@ import sys
 import structlog
 from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
 
-# Configure structlog for JSON output
+# Configure structlog to go through stdlib logging so it coexists
+# with Airflow, Spark, and other frameworks that use standard logging.
+logging.basicConfig(stream=sys.stdout, level=logging.WARNING, format="%(message)s")
+
 structlog.configure(
     processors=[
         structlog.stdlib.add_log_level,
@@ -36,14 +39,12 @@ structlog.configure(
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
-        structlog.processors.JSONRenderer(),
+        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
     ],
     wrapper_class=structlog.stdlib.BoundLogger,
-    logger_factory=structlog.PrintLoggerFactory(file=sys.stdout),
+    logger_factory=structlog.stdlib.LoggerFactory(),  # uses standard Python logging
     cache_logger_on_first_use=True,
 )
-
-logging.basicConfig(stream=sys.stdout, level=logging.WARNING)
 
 
 class PipelineMetrics:
