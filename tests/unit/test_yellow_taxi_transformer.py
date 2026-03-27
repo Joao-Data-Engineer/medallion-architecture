@@ -8,7 +8,9 @@ Uses a local Spark session with synthetic data — no MinIO or external services
 import pytest
 from pyspark.sql import Row
 
-from spark_jobs.bronze_to_silver.schema_definitions import BRONZE_YELLOW_TAXI_SCHEMA, AIRPORT_LOCATION_IDS
+from spark_jobs.bronze_to_silver.schema_definitions import (
+    BRONZE_YELLOW_TAXI_SCHEMA,
+)
 from spark_jobs.bronze_to_silver.yellow_taxi_transformer import (
     add_derived_columns,
     cast_and_validate,
@@ -50,6 +52,7 @@ class TestCastAndValidate:
 
     def test_drops_rows_where_dropoff_before_pickup(self, spark, sample_bronze_rows):
         from datetime import datetime
+
         rows = [
             {
                 **sample_bronze_rows[0],
@@ -100,9 +103,19 @@ class TestEnrichWithZones:
 
         # Create a minimal zones DataFrame
         zones_data = [
-            Row(LocationID=161, Borough="Manhattan", Zone="Midtown Center", service_zone="Yellow Zone"),
+            Row(
+                LocationID=161,
+                Borough="Manhattan",
+                Zone="Midtown Center",
+                service_zone="Yellow Zone",
+            ),
             Row(LocationID=132, Borough="Queens", Zone="JFK Airport", service_zone="Airports"),
-            Row(LocationID=236, Borough="Manhattan", Zone="Upper East Side South", service_zone="Yellow Zone"),
+            Row(
+                LocationID=236,
+                Borough="Manhattan",
+                Zone="Upper East Side South",
+                service_zone="Yellow Zone",
+            ),
         ]
         zones_df = spark.createDataFrame(zones_data)
 
@@ -116,7 +129,9 @@ class TestEnrichWithZones:
         df = spark.createDataFrame(sample_bronze_rows, schema=BRONZE_YELLOW_TAXI_SCHEMA)
         validated = cast_and_validate(df)
         # Empty zones DataFrame — all locations are unknown
-        zones_df = spark.createDataFrame([], "LocationID INT, Borough STRING, Zone STRING, service_zone STRING")
+        zones_df = spark.createDataFrame(
+            [], "LocationID INT, Borough STRING, Zone STRING, service_zone STRING"
+        )
 
         result = enrich_with_zones(validated, zones_df)
         unknowns = result.filter(result["pickup_borough"] == "Unknown").count()
@@ -130,9 +145,19 @@ class TestAddDerivedColumns:
         validated = cast_and_validate(df)
         cleaned = remove_outliers(validated, MOCK_CONFIG)
         zones_data = [
-            Row(LocationID=161, Borough="Manhattan", Zone="Midtown Center", service_zone="Yellow Zone"),
+            Row(
+                LocationID=161,
+                Borough="Manhattan",
+                Zone="Midtown Center",
+                service_zone="Yellow Zone",
+            ),
             Row(LocationID=132, Borough="Queens", Zone="JFK Airport", service_zone="Airports"),
-            Row(LocationID=236, Borough="Manhattan", Zone="Upper East Side South", service_zone="Yellow Zone"),
+            Row(
+                LocationID=236,
+                Borough="Manhattan",
+                Zone="Upper East Side South",
+                service_zone="Yellow Zone",
+            ),
         ]
         zones_df = spark.createDataFrame(zones_data)
         return enrich_with_zones(cleaned, zones_df)

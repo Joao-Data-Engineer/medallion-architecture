@@ -23,7 +23,7 @@ import sys
 from datetime import datetime
 
 import yaml
-from delta import DeltaTable, configure_spark_with_delta_pip
+from delta import configure_spark_with_delta_pip
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import IntegerType
@@ -38,11 +38,12 @@ from spark_jobs.bronze_to_silver.schema_definitions import (
 )
 from spark_jobs.utils.delta_utils import get_or_create_delta_table, optimize_delta_table
 from spark_jobs.utils.metrics import PipelineMetrics
-from spark_jobs.utils.minio_client import get_s3a_conf
 
 
 def load_config() -> dict:
-    config_path = os.environ.get("PIPELINE_CONFIG_PATH", "/opt/spark/work-dir/config/pipeline_config.yml")
+    config_path = os.environ.get(
+        "PIPELINE_CONFIG_PATH", "/opt/spark/work-dir/config/pipeline_config.yml"
+    )
     with open(config_path) as f:
         return yaml.safe_load(f)
 
@@ -60,7 +61,9 @@ def build_spark_session(cfg: dict) -> SparkSession:
         .config("spark.hadoop.fs.s3a.access.key", os.environ["AWS_ACCESS_KEY_ID"])
         .config("spark.hadoop.fs.s3a.secret.key", os.environ["AWS_SECRET_ACCESS_KEY"])
         .config("spark.hadoop.fs.s3a.path.style.access", str(s3a["path_style_access"]).lower())
-        .config("spark.hadoop.fs.s3a.connection.ssl.enabled", str(s3a["connection_ssl_enabled"]).lower())
+        .config(
+            "spark.hadoop.fs.s3a.connection.ssl.enabled", str(s3a["connection_ssl_enabled"]).lower()
+        )
         .config("spark.hadoop.fs.s3a.impl", s3a["impl"])
         .config("spark.hadoop.fs.s3a.fast.upload", str(s3a["fast_upload"]).lower())
         # Delta Lake commit protocol
@@ -70,6 +73,7 @@ def build_spark_session(cfg: dict) -> SparkSession:
 
 
 # ─── Step 1: Read Bronze ──────────────────────────────────────────────────────
+
 
 def read_bronze(spark: SparkSession, cfg: dict, year: int, month: int) -> DataFrame:
     storage = cfg["storage"]
@@ -83,6 +87,7 @@ def read_bronze(spark: SparkSession, cfg: dict, year: int, month: int) -> DataFr
 
 
 # ─── Step 2: Cast & Validate ──────────────────────────────────────────────────
+
 
 def cast_and_validate(df: DataFrame) -> DataFrame:
     return (
@@ -113,13 +118,13 @@ def cast_and_validate(df: DataFrame) -> DataFrame:
 
 # ─── Step 3: Remove Outliers ──────────────────────────────────────────────────
 
+
 def remove_outliers(df: DataFrame, cfg: dict) -> DataFrame:
     outliers = cfg["silver"]["outliers"]
     return (
-        df
-        .filter(F.col("fare_amount").between(
-            outliers["min_fare_amount"], outliers["max_fare_amount"]
-        ))
+        df.filter(
+            F.col("fare_amount").between(outliers["min_fare_amount"], outliers["max_fare_amount"])
+        )
         .filter(F.col("trip_distance").between(0.0, outliers["max_trip_distance_miles"]))
         .filter(
             F.col("passenger_count").isNull()
@@ -131,6 +136,7 @@ def remove_outliers(df: DataFrame, cfg: dict) -> DataFrame:
 
 
 # ─── Step 4: Zone Lookup Join ─────────────────────────────────────────────────
+
 
 def load_zone_lookup(spark: SparkSession, cfg: dict) -> DataFrame:
     storage = cfg["storage"]
@@ -154,8 +160,7 @@ def enrich_with_zones(df: DataFrame, zones: DataFrame) -> DataFrame:
     )
 
     return (
-        df
-        .join(pickup_zones, df["PULocationID"] == pickup_zones["pu_loc_id"], "left")
+        df.join(pickup_zones, df["PULocationID"] == pickup_zones["pu_loc_id"], "left")
         .join(dropoff_zones, df["DOLocationID"] == dropoff_zones["do_loc_id"], "left")
         .drop("pu_loc_id", "do_loc_id")
         # Fill unknown zones (location IDs not in lookup)
@@ -167,6 +172,7 @@ def enrich_with_zones(df: DataFrame, zones: DataFrame) -> DataFrame:
 
 
 # ─── Step 5: Derived Columns ──────────────────────────────────────────────────
+
 
 def add_derived_columns(df: DataFrame, year: int, month: int) -> DataFrame:
     airport_ids = list(AIRPORT_LOCATION_IDS)
@@ -214,18 +220,19 @@ def add_derived_columns(df: DataFrame, year: int, month: int) -> DataFrame:
             ).otherwise(F.lit(None)),
         )
         # Partition columns
-        .withColumn("year", F.lit(year).cast(IntegerType()))
-        .withColumn("month", F.lit(month).cast(IntegerType()))
+        .withColumn("year", F.lit(year).cast(IntegerType())).withColumn(
+            "month", F.lit(month).cast(IntegerType())
+        )
     )
 
 
 # ─── Step 6: Delta MERGE (idempotent write) ───────────────────────────────────
 
+
 def write_to_silver(spark: SparkSession, df: DataFrame, cfg: dict) -> int:
     storage = cfg["storage"]
     silver_path = (
-        f"s3a://{storage['buckets']['silver']}/"
-        f"{storage['paths']['silver_yellow_taxi']}"
+        f"s3a://{storage['buckets']['silver']}/" f"{storage['paths']['silver_yellow_taxi']}"
     )
     partition_cols = cfg["silver"]["partition_columns"]
 
@@ -258,6 +265,7 @@ def write_to_silver(spark: SparkSession, df: DataFrame, cfg: dict) -> int:
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
+
 
 def main(year: int, month: int) -> None:
     cfg = load_config()

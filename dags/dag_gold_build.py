@@ -67,8 +67,7 @@ def gold_build_dag():
     dbt_docs = BashOperator(
         task_id="dbt_docs_generate",
         bash_command=(
-            f"cd {DBT_PROJECT_DIR} && "
-            f"dbt docs generate --profiles-dir {DBT_PROFILES_DIR}"
+            f"cd {DBT_PROJECT_DIR} && " f"dbt docs generate --profiles-dir {DBT_PROFILES_DIR}"
         ),
         trigger_rule="all_success",
     )
@@ -78,9 +77,7 @@ def gold_build_dag():
         """Runs Great Expectations Gold checkpoint."""
         import great_expectations as gx
 
-        gx_context = gx.get_context(
-            context_root_dir="/opt/airflow/great_expectations"
-        )
+        gx_context = gx.get_context(context_root_dir="/opt/airflow/great_expectations")
         result = gx_context.run_checkpoint(
             checkpoint_name="gold_checkpoint",
             run_name=context["run_id"],

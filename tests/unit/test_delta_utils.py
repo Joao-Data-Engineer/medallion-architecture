@@ -5,18 +5,18 @@ Unit tests for Delta Lake utility functions.
 Uses a local temp directory to test table creation and idempotency.
 """
 
-import tempfile
-
 import pytest
 from pyspark.sql.types import IntegerType, StringType, StructField, StructType
 
 
 @pytest.mark.unit
 class TestGetOrCreateDeltaTable:
-    SCHEMA = StructType([
-        StructField("id", IntegerType(), False),
-        StructField("name", StringType(), True),
-    ])
+    SCHEMA = StructType(
+        [
+            StructField("id", IntegerType(), False),
+            StructField("name", StringType(), True),
+        ]
+    )
 
     def test_creates_delta_table_when_not_exists(self, spark, tmp_path):
         from spark_jobs.utils.delta_utils import get_or_create_delta_table
@@ -47,7 +47,6 @@ class TestGetOrCreateDeltaTable:
 @pytest.mark.unit
 class TestTimeTravelRead:
     def test_reads_at_version_zero(self, spark, tmp_path):
-        from delta import DeltaTable
         from spark_jobs.utils.delta_utils import time_travel_read
 
         path = f"file://{tmp_path}/tt_table"
@@ -56,7 +55,9 @@ class TestTimeTravelRead:
         # Write version 0
         spark.createDataFrame([(1,), (2,)], schema=schema).write.format("delta").save(path)
         # Write version 1
-        spark.createDataFrame([(3,), (4,)], schema=schema).write.format("delta").mode("append").save(path)
+        spark.createDataFrame([(3,), (4,)], schema=schema).write.format("delta").mode(
+            "append"
+        ).save(path)
 
         v0 = time_travel_read(spark, path, version=0)
         assert v0.count() == 2

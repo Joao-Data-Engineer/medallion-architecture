@@ -10,9 +10,6 @@ Requires: local PySpark (no MinIO or cluster needed).
 Mark: integration (skipped in unit-only CI runs).
 """
 
-import os
-import tempfile
-
 import pytest
 from pyspark.sql import Row
 
@@ -23,7 +20,6 @@ from spark_jobs.bronze_to_silver.yellow_taxi_transformer import (
     enrich_with_zones,
     remove_outliers,
 )
-
 
 MOCK_CONFIG = {
     "silver": {
@@ -49,14 +45,22 @@ class TestBronzeToSilverPipeline:
         End-to-end test: Bronze rows → full transform pipeline → Silver Delta table.
         Verifies row count, schema, and partitioning.
         """
-        from spark_jobs.utils.delta_utils import get_or_create_delta_table
-        from spark_jobs.bronze_to_silver.schema_definitions import SILVER_YELLOW_TAXI_SCHEMA
 
         # Create zones fixture
         zones_data = [
-            Row(LocationID=161, Borough="Manhattan", Zone="Midtown Center", service_zone="Yellow Zone"),
+            Row(
+                LocationID=161,
+                Borough="Manhattan",
+                Zone="Midtown Center",
+                service_zone="Yellow Zone",
+            ),
             Row(LocationID=132, Borough="Queens", Zone="JFK Airport", service_zone="Airports"),
-            Row(LocationID=236, Borough="Manhattan", Zone="Upper East Side South", service_zone="Yellow Zone"),
+            Row(
+                LocationID=236,
+                Borough="Manhattan",
+                Zone="Upper East Side South",
+                service_zone="Yellow Zone",
+            ),
         ]
         zones_df = spark.createDataFrame(zones_data)
 
@@ -83,12 +87,21 @@ class TestBronzeToSilverPipeline:
     def test_pipeline_is_idempotent(self, spark, tmp_path, sample_bronze_rows):
         """Running the pipeline twice produces the same number of rows (Delta MERGE)."""
         from spark_jobs.utils.delta_utils import get_or_create_delta_table
-        from spark_jobs.bronze_to_silver.schema_definitions import SILVER_YELLOW_TAXI_SCHEMA
 
         zones_data = [
-            Row(LocationID=161, Borough="Manhattan", Zone="Midtown Center", service_zone="Yellow Zone"),
+            Row(
+                LocationID=161,
+                Borough="Manhattan",
+                Zone="Midtown Center",
+                service_zone="Yellow Zone",
+            ),
             Row(LocationID=132, Borough="Queens", Zone="JFK Airport", service_zone="Airports"),
-            Row(LocationID=236, Borough="Manhattan", Zone="Upper East Side South", service_zone="Yellow Zone"),
+            Row(
+                LocationID=236,
+                Borough="Manhattan",
+                Zone="Upper East Side South",
+                service_zone="Yellow Zone",
+            ),
         ]
         zones_df = spark.createDataFrame(zones_data)
 
@@ -121,16 +134,28 @@ class TestBronzeToSilverPipeline:
 
         count_run1 = run_pipeline()
         count_run2 = run_pipeline()
-        assert count_run1 == count_run2, (
-            f"Pipeline is not idempotent: run 1 = {count_run1}, run 2 = {count_run2}"
-        )
+        assert (
+            count_run1 == count_run2
+        ), f"Pipeline is not idempotent: run 1 = {count_run1}, run 2 = {count_run2}"
 
-    def test_outlier_rows_not_in_silver(self, spark, tmp_path, sample_bronze_rows, sample_outlier_rows):
+    def test_outlier_rows_not_in_silver(
+        self, spark, tmp_path, sample_bronze_rows, sample_outlier_rows
+    ):
         """Outlier rows from Bronze must not appear in Silver."""
         zones_data = [
-            Row(LocationID=161, Borough="Manhattan", Zone="Midtown Center", service_zone="Yellow Zone"),
+            Row(
+                LocationID=161,
+                Borough="Manhattan",
+                Zone="Midtown Center",
+                service_zone="Yellow Zone",
+            ),
             Row(LocationID=132, Borough="Queens", Zone="JFK Airport", service_zone="Airports"),
-            Row(LocationID=236, Borough="Manhattan", Zone="Upper East Side South", service_zone="Yellow Zone"),
+            Row(
+                LocationID=236,
+                Borough="Manhattan",
+                Zone="Upper East Side South",
+                service_zone="Yellow Zone",
+            ),
         ]
         zones_df = spark.createDataFrame(zones_data)
 

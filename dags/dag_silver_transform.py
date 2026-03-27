@@ -77,8 +77,10 @@ def silver_transform_dag():
         conn_id="spark_default",
         conf=SPARK_CONF,
         application_args=[
-            "--year", "{{ dag_run.conf.get('year', logical_date.year) }}",
-            "--month", "{{ dag_run.conf.get('month', logical_date.month) }}",
+            "--year",
+            "{{ dag_run.conf.get('year', logical_date.year) }}",
+            "--month",
+            "{{ dag_run.conf.get('month', logical_date.month) }}",
         ],
         name="medallion-bronze-to-silver",
         verbose=False,
@@ -94,9 +96,7 @@ def silver_transform_dag():
         """Runs Great Expectations Silver checkpoint."""
         import great_expectations as gx
 
-        gx_context = gx.get_context(
-            context_root_dir="/opt/airflow/great_expectations"
-        )
+        gx_context = gx.get_context(context_root_dir="/opt/airflow/great_expectations")
         result = gx_context.run_checkpoint(
             checkpoint_name="silver_checkpoint",
             run_name=context["run_id"],

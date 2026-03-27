@@ -51,8 +51,8 @@ def sample_bronze_rows():
             "trip_distance": 5.3,
             "RatecodeID": 1.0,
             "store_and_fwd_flag": "N",
-            "PULocationID": 161,   # Midtown Center (Manhattan)
-            "DOLocationID": 236,   # Upper East Side South
+            "PULocationID": 161,  # Midtown Center (Manhattan)
+            "DOLocationID": 236,  # Upper East Side South
             "payment_type": 1,
             "fare_amount": 18.50,
             "extra": 1.0,
@@ -72,8 +72,8 @@ def sample_bronze_rows():
             "trip_distance": 12.1,
             "RatecodeID": 2.0,
             "store_and_fwd_flag": "N",
-            "PULocationID": 132,   # JFK Airport
-            "DOLocationID": 161,   # Midtown Center
+            "PULocationID": 132,  # JFK Airport
+            "DOLocationID": 161,  # Midtown Center
             "payment_type": 1,
             "fare_amount": 70.00,
             "extra": 0.0,
@@ -116,7 +116,9 @@ def sample_outlier_rows():
         {
             "VendorID": 1,
             "tpep_pickup_datetime": datetime(2024, 1, 15, 6, 0, 0),
-            "tpep_dropoff_datetime": datetime(2024, 1, 15, 12, 0, 0),  # 6 HOURS - should be filtered
+            "tpep_dropoff_datetime": datetime(
+                2024, 1, 15, 12, 0, 0
+            ),  # 6 HOURS - should be filtered
             "passenger_count": 1.0,
             "trip_distance": 200.0,  # 200 miles - should be filtered
             "RatecodeID": 1.0,

@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import logging
 import sys
-from datetime import datetime, timezone
 
 import structlog
 from prometheus_client import CollectorRegistry, Gauge, push_to_gateway

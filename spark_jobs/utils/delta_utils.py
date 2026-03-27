@@ -44,7 +44,9 @@ def get_or_create_delta_table(
     return DeltaTable.forPath(spark, path)
 
 
-def optimize_delta_table(spark: SparkSession, path: str, z_order_cols: list[str] | None = None) -> None:
+def optimize_delta_table(
+    spark: SparkSession, path: str, z_order_cols: list[str] | None = None
+) -> None:
     """
     Runs OPTIMIZE on a Delta table to compact small files.
     Optionally applies ZORDER to co-locate data for common query filters.
@@ -79,9 +81,7 @@ def get_delta_history(spark: SparkSession, path: str, limit: int = 10) -> None:
     from delta import DeltaTable
 
     history = DeltaTable.forPath(spark, path).history(limit)
-    history.select("version", "timestamp", "operation", "operationParameters").show(
-        truncate=False
-    )
+    history.select("version", "timestamp", "operation", "operationParameters").show(truncate=False)
 
 
 def time_travel_read(spark, path: str, version: int | None = None, timestamp: str | None = None):

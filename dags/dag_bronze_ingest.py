@@ -85,9 +85,7 @@ def bronze_ingest_dag():
         import great_expectations as gx
         from great_expectations.core.batch import BatchRequest
 
-        gx_context = gx.get_context(
-            context_root_dir="/opt/airflow/great_expectations"
-        )
+        gx_context = gx.get_context(context_root_dir="/opt/airflow/great_expectations")
         batch_request = BatchRequest(
             datasource_name="bronze_s3_datasource",
             data_connector_name="default_inferred_data_connector_name",

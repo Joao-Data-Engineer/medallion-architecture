@@ -61,7 +61,9 @@ class TLCIngestOperator(BaseOperator):
         year_str = str(int(self.year))
         filename = f"yellow_tripdata_{year_str}-{month_str}.parquet"
         url = f"{source['tlc_base_url']}/{filename}"
-        s3_key = f"{storage['paths']['bronze_yellow_taxi']}/year={year_str}/month={month_str}/{filename}"
+        s3_key = (
+            f"{storage['paths']['bronze_yellow_taxi']}/year={year_str}/month={month_str}/{filename}"
+        )
         bucket = storage["buckets"]["bronze"]
 
         log = logger.bind(
@@ -116,9 +118,7 @@ class TLCIngestOperator(BaseOperator):
         except Exception:
             return False
 
-    def _stream_to_minio(
-        self, s3_client, url: str, bucket: str, key: str, log
-    ) -> int:
+    def _stream_to_minio(self, s3_client, url: str, bucket: str, key: str, log) -> int:
         """Streams HTTP response body directly into a MinIO multipart upload."""
         chunk_size = 64 * 1024 * 1024  # 64 MB parts
 
@@ -146,7 +146,11 @@ class TLCIngestOperator(BaseOperator):
                         Body=buffer,
                     )
                     parts.append({"PartNumber": part_number, "ETag": part["ETag"]})
-                    log.debug("multipart_part_uploaded", part_number=part_number, buffer_mb=len(buffer) // 1024 // 1024)
+                    log.debug(
+                        "multipart_part_uploaded",
+                        part_number=part_number,
+                        buffer_mb=len(buffer) // 1024 // 1024,
+                    )
                     part_number += 1
                     buffer = b""
 
