@@ -1,0 +1,105 @@
+{
+  "data_asset_type": null,
+  "expectation_suite_name": "bronze_yellow_taxi_suite",
+  "expectations": [
+    {
+      "expectation_type": "expect_table_row_count_to_be_between",
+      "kwargs": { "min_value": 500000 },
+      "meta": { "notes": "Minimum rows for a valid monthly NYC Yellow Taxi file" }
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": { "column": "VendorID" }
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": { "column": "tpep_pickup_datetime" }
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": { "column": "tpep_dropoff_datetime" }
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": { "column": "passenger_count" }
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": { "column": "trip_distance" }
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": { "column": "PULocationID" }
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": { "column": "DOLocationID" }
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": { "column": "fare_amount" }
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": { "column": "tip_amount" }
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": { "column": "total_amount" }
+    },
+    {
+      "expectation_type": "expect_column_to_exist",
+      "kwargs": { "column": "payment_type" }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "tpep_pickup_datetime", "mostly": 1.0 },
+      "meta": { "notes": "Pickup datetime must always be present" }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "PULocationID", "mostly": 0.99 }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "DOLocationID", "mostly": 0.99 }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "fare_amount", "mostly": 0.99 }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "fare_amount",
+        "min_value": -10,
+        "max_value": 1000,
+        "mostly": 0.99
+      },
+      "meta": { "notes": "Soft check - Silver will enforce stricter bounds" }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "PULocationID",
+        "min_value": 1,
+        "max_value": 265,
+        "mostly": 0.99
+      },
+      "meta": { "notes": "NYC TLC zone IDs range 1-265" }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "DOLocationID",
+        "min_value": 1,
+        "max_value": 265,
+        "mostly": 0.99
+      }
+    }
+  ],
+  "meta": {
+    "great_expectations_version": "0.18.19",
+    "notes": "Bronze layer expectations - intentionally lenient. Silver layer enforces stricter rules."
+  }
+}

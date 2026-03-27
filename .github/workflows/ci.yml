@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─── Lint ──────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint (ruff + black)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install linting tools
+        run: pip install ruff black
+
+      - name: Run ruff
+        run: ruff check .
+
+      - name: Run black --check
+        run: black --check .
+
+  # ─── Unit Tests ───────────────────────────────────────────────────────────
+  unit-tests:
+    name: Unit Tests (PySpark local)
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Java 17 (required by PySpark)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+
+      - name: Install dependencies
+        run: |
+          pip install pyspark==3.5.1 delta-spark==3.1.0 \
+            structlog pyyaml pyarrow prometheus-client pytest pytest-cov
+
+      - name: Run unit tests with coverage
+        env:
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+        run: |
+          pytest tests/unit/ -v -m unit \
+            --cov=spark_jobs \
+            --cov-report=term-missing \
+            --cov-fail-under=80
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: .coverage
+
+  # ─── dbt Validation ───────────────────────────────────────────────────────
+  dbt-validate:
+    name: dbt Parse + Compile
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dbt
+        run: pip install dbt-core==1.8.3 dbt-duckdb==1.8.1
+
+      - name: dbt parse (validates model syntax)
+        working-directory: dbt/nyc_taxi
+        run: dbt parse --profiles-dir . --target duckdb
+
+      - name: dbt compile (validates all model references)
+        working-directory: dbt/nyc_taxi
+        run: dbt compile --profiles-dir . --target duckdb
+
+  # ─── Docker Build (on merge to main) ─────────────────────────────────────
+  docker-build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [unit-tests, dbt-validate]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Airflow image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docker/airflow
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build Spark image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docker/spark
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

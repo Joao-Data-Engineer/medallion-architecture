@@ -1,0 +1,25 @@
+nyc_taxi:
+  target: dev
+  outputs:
+    dev:
+      type: spark
+      method: thrift
+      host: spark-master
+      port: 10000
+      schema: gold
+      connect_retries: 5
+      connect_timeout: 60
+      threads: 2
+
+    # Alternative: DuckDB profile for lightweight local runs
+    # (reads Silver Delta directly from MinIO without Spark Thrift)
+    duckdb:
+      type: duckdb
+      path: ":memory:"
+      threads: 4
+      settings:
+        s3_endpoint: "minio:9000"
+        s3_access_key_id: "{{ env_var('AWS_ACCESS_KEY_ID') }}"
+        s3_secret_access_key: "{{ env_var('AWS_SECRET_ACCESS_KEY') }}"
+        s3_use_ssl: false
+        s3_url_style: path

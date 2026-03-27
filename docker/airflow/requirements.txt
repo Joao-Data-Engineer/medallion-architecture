@@ -1,0 +1,23 @@
+# Spark
+pyspark==3.5.1
+
+# Delta Lake
+delta-spark==3.1.0
+
+# AWS / MinIO (S3-compatible)
+boto3==1.34.69
+apache-airflow-providers-amazon==8.20.0
+
+# Data Quality
+great-expectations==0.18.19
+
+# dbt
+dbt-core==1.8.3
+dbt-spark[PyHive]==1.8.0
+
+# Utilities
+structlog==24.1.0
+pyyaml==6.0.1
+pandas==2.2.1
+pyarrow==15.0.2
+prometheus-client==0.20.0

@@ -1,0 +1,21 @@
+name: bronze_checkpoint
+config_version: 1.0
+class_name: SimpleCheckpoint
+run_name_template: "%Y%m%d-%H%M%S-bronze"
+expectation_suite_name: bronze_yellow_taxi_suite
+action_list:
+  - name: store_validation_result
+    action:
+      class_name: StoreValidationResultAction
+  - name: update_data_docs
+    action:
+      class_name: UpdateDataDocsAction
+      site_names:
+        - local_site
+  - name: send_slack_notification_on_failure
+    action:
+      class_name: SlackNotificationAction
+      slack_webhook: "${SLACK_WEBHOOK}"
+      notify_on: failure
+      notify_with:
+        - local_site

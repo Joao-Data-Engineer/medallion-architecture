@@ -1,0 +1,39 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    project: medallion-architecture
+
+scrape_configs:
+  # Airflow metrics (via StatsD exporter)
+  - job_name: airflow
+    static_configs:
+      - targets: ["statsd-exporter:9102"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: airflow
+
+  # MinIO metrics
+  - job_name: minio
+    metrics_path: /minio/v2/metrics/cluster
+    static_configs:
+      - targets: ["minio:9000"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: minio
+
+  # Prometheus self-monitoring
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Spark master metrics (JMX exporter, if configured)
+  - job_name: spark-master
+    static_configs:
+      - targets: ["spark-master:7077"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: spark-master

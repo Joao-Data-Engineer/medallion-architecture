@@ -1,0 +1,80 @@
+{
+  "__inputs": [],
+  "__elements": {},
+  "__requires": [
+    {"type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0"},
+    {"type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0"},
+    {"type": "panel", "id": "stat", "name": "Stat", "version": ""},
+    {"type": "panel", "id": "timeseries", "name": "Time series", "version": ""}
+  ],
+  "annotations": {"list": []},
+  "description": "Medallion Architecture Pipeline Overview",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "green", "value": 1}
+            ]
+          }
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "orientation": "auto", "textMode": "auto", "colorMode": "background"},
+      "title": "Airflow DAG Runs (Success)",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "sum(airflow_dag_run_duration_success)",
+          "legendFormat": "Successful Runs"
+        }
+      ]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "bytes"}},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "id": 2,
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "orientation": "auto", "textMode": "auto"},
+      "title": "MinIO Bronze Bucket Size",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "minio_bucket_usage_object_total{bucket=\"bronze\"}",
+          "legendFormat": "Bronze Objects"
+        }
+      ]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "id": 3,
+      "options": {"tooltip": {"mode": "multi"}},
+      "title": "DAG Run Duration Over Time",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "airflow_dag_run_duration{dag_id=~\"dag_.*\"}",
+          "legendFormat": "{{dag_id}}"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 38,
+  "tags": ["medallion", "pipeline"],
+  "title": "Medallion Pipeline Overview",
+  "uid": "medallion-pipeline",
+  "version": 1
+}

@@ -1,0 +1,282 @@
+version: "3.9"
+
+x-airflow-common: &airflow-common
+  image: medallion/airflow:latest
+  build:
+    context: ./docker/airflow
+    dockerfile: Dockerfile
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
+    AIRFLOW__METRICS__STATSD_ON: "true"
+    AIRFLOW__METRICS__STATSD_HOST: statsd-exporter
+    AIRFLOW__METRICS__STATSD_PORT: 8125
+    AIRFLOW__METRICS__STATSD_PREFIX: airflow
+    # MinIO / S3 connectivity
+    AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+    AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+    AWS_DEFAULT_REGION: us-east-1
+    MINIO_ENDPOINT: http://minio:9000
+    # Spark
+    SPARK_MASTER_URL: spark://spark-master:7077
+    # Pipeline config
+    PIPELINE_CONFIG_PATH: /opt/airflow/config/pipeline_config.yml
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./spark_jobs:/opt/airflow/spark_jobs
+    - ./dbt:/opt/airflow/dbt
+    - ./great_expectations:/opt/airflow/great_expectations
+    - ./config:/opt/airflow/config
+    - ./logs/airflow:/opt/airflow/logs
+    - airflow-plugins:/opt/airflow/plugins
+  depends_on:
+    postgres:
+      condition: service_healthy
+  networks:
+    - medallion-net
+  profiles:
+    - orchestration
+
+services:
+  # ─────────────────────────────────────────
+  # CORE: storage + metadata DB
+  # ─────────────────────────────────────────
+  minio:
+    image: minio/minio:RELEASE.2024-03-15T01-07-19Z
+    container_name: medallion-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - medallion-net
+    profiles:
+      - core
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: medallion-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - medallion-net
+    profiles:
+      - core
+
+  # ─────────────────────────────────────────
+  # ORCHESTRATION: Airflow
+  # ─────────────────────────────────────────
+  airflow-init:
+    <<: *airflow-common
+    container_name: medallion-airflow-init
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate &&
+        airflow users create \
+          --username ${AIRFLOW_ADMIN_USER} \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@medallion.local \
+          --password ${AIRFLOW_ADMIN_PASSWORD}
+    restart: on-failure
+    profiles:
+      - orchestration
+
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: medallion-airflow-webserver
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    profiles:
+      - orchestration
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: medallion-airflow-scheduler
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "airflow", "jobs", "check", "--job-type", "SchedulerJob", "--hostname", "$${HOSTNAME}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    profiles:
+      - orchestration
+
+  # ─────────────────────────────────────────
+  # PROCESSING: Spark Standalone Cluster
+  # ─────────────────────────────────────────
+  spark-master:
+    image: medallion/spark:latest
+    build:
+      context: ./docker/spark
+      dockerfile: Dockerfile
+    container_name: medallion-spark-master
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    environment:
+      SPARK_MASTER_HOST: spark-master
+      SPARK_MASTER_PORT: 7077
+      SPARK_MASTER_WEBUI_PORT: 8081
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "7077:7077"
+      - "8081:8081"
+    volumes:
+      - ./spark_jobs:/opt/spark/work-dir/spark_jobs
+      - ./config:/opt/spark/work-dir/config
+    networks:
+      - medallion-net
+    profiles:
+      - processing
+
+  spark-worker:
+    image: medallion/spark:latest
+    container_name: medallion-spark-worker
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    environment:
+      SPARK_WORKER_CORES: ${SPARK_WORKER_CORES:-2}
+      SPARK_WORKER_MEMORY: ${SPARK_WORKER_MEMORY:-2g}
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+    depends_on:
+      - spark-master
+    volumes:
+      - ./spark_jobs:/opt/spark/work-dir/spark_jobs
+      - ./config:/opt/spark/work-dir/config
+    networks:
+      - medallion-net
+    profiles:
+      - processing
+
+  # ─────────────────────────────────────────
+  # SERVING: Superset + DuckDB
+  # ─────────────────────────────────────────
+  superset:
+    image: medallion/superset:latest
+    build:
+      context: ./docker/superset
+      dockerfile: Dockerfile
+    container_name: medallion-superset
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
+      SUPERSET_ADMIN_USER: ${SUPERSET_ADMIN_USER}
+      SUPERSET_ADMIN_PASSWORD: ${SUPERSET_ADMIN_PASSWORD}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "8088:8088"
+    volumes:
+      - superset-data:/app/superset_home
+      - ./docker/superset/superset_config.py:/app/pythonpath/superset_config.py
+    depends_on:
+      - minio
+    networks:
+      - medallion-net
+    profiles:
+      - serving
+
+  # ─────────────────────────────────────────
+  # MONITORING: Prometheus + Grafana + StatsD
+  # ─────────────────────────────────────────
+  statsd-exporter:
+    image: prom/statsd-exporter:v0.26.1
+    container_name: medallion-statsd
+    ports:
+      - "9102:9102"
+      - "8125:8125/udp"
+    networks:
+      - medallion-net
+    profiles:
+      - monitoring
+
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    container_name: medallion-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - medallion-net
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: medallion-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    networks:
+      - medallion-net
+    profiles:
+      - monitoring
+
+volumes:
+  minio-data:
+  postgres-data:
+  airflow-plugins:
+  superset-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  medallion-net:
+    driver: bridge

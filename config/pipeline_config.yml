@@ -1,0 +1,152 @@
+# pipeline_config.yml
+# Central configuration for the Medallion Architecture pipeline.
+# All operators, Spark jobs, and GX checkpoints read from here.
+# Change thresholds here — not in code.
+
+# ─── Object Storage ───────────────────────────────────────────────────────────
+storage:
+  endpoint: "http://minio:9000"
+  buckets:
+    bronze: "bronze"
+    silver: "silver"
+    gold: "gold"
+    data_quality: "data-quality"
+    quarantine: "quarantine"
+  paths:
+    bronze_yellow_taxi: "raw/yellow_taxi"
+    bronze_taxi_zones: "raw/taxi_zones/taxi_zone_lookup.csv"
+    silver_yellow_taxi: "yellow_taxi"
+    gold_prefix: ""  # gold tables sit at bucket root, partitioned by table name
+
+# ─── Data Source ──────────────────────────────────────────────────────────────
+source:
+  tlc_base_url: "https://d37ci6vzurychx.cloudfront.net/trip-data"
+  zone_lookup_url: "https://d37ci6vzurychx.cloudfront.net/misc/taxi_zone_lookup.csv"
+  taxi_types:
+    - yellow
+  # Earliest available month for backfill
+  earliest_year: 2022
+  earliest_month: 1
+
+# ─── Bronze Layer ─────────────────────────────────────────────────────────────
+bronze:
+  quality:
+    min_row_count: 500_000       # Fail if file has fewer rows than this
+    required_columns:
+      - VendorID
+      - tpep_pickup_datetime
+      - tpep_dropoff_datetime
+      - passenger_count
+      - trip_distance
+      - RatecodeID
+      - store_and_fwd_flag
+      - PULocationID
+      - DOLocationID
+      - payment_type
+      - fare_amount
+      - extra
+      - mta_tax
+      - tip_amount
+      - tolls_amount
+      - improvement_surcharge
+      - total_amount
+      - congestion_surcharge
+      - Airport_fee
+    not_null_columns:
+      - tpep_pickup_datetime
+      - PULocationID
+      - DOLocationID
+      - fare_amount
+
+# ─── Silver Layer ─────────────────────────────────────────────────────────────
+silver:
+  partition_columns:
+    - year
+    - month
+    - pickup_borough
+  z_order_columns:
+    - PULocationID
+    - DOLocationID
+  # Outlier removal thresholds
+  outliers:
+    max_trip_distance_miles: 150.0
+    min_fare_amount: 0.0
+    max_fare_amount: 500.0
+    min_trip_duration_minutes: 1.0
+    max_trip_duration_minutes: 300.0
+    max_passenger_count: 8
+    min_passenger_count: 1
+  # Delta OPTIMIZE runs after every N writes to control file fragmentation
+  optimize_after_writes: 1
+  quality:
+    not_null_columns:
+      - pickup_datetime
+      - dropoff_datetime
+      - PULocationID
+      - DOLocationID
+      - fare_amount
+      - trip_duration_minutes
+      - pickup_borough
+      - dropoff_borough
+    fare_amount_range: [0.0, 500.0]
+    trip_duration_range: [1.0, 300.0]
+    valid_boroughs:
+      - Manhattan
+      - Brooklyn
+      - Queens
+      - Bronx
+      - "Staten Island"
+      - EWR
+      - Unknown
+
+# ─── Gold Layer ───────────────────────────────────────────────────────────────
+gold:
+  models:
+    - fct_hourly_zone_revenue
+    - fct_daily_borough_demand
+    - dim_taxi_zones
+    - mart_payment_analysis
+  quality:
+    # Gold revenue total must be within 1% of Silver total for the same period
+    revenue_reconciliation_tolerance_pct: 1.0
+
+# ─── Spark ────────────────────────────────────────────────────────────────────
+spark:
+  master: "spark://spark-master:7077"
+  app_name: "medallion-nyc-taxi"
+  executor_memory: "1g"
+  executor_cores: 1
+  driver_memory: "1g"
+  # S3A configuration for MinIO
+  s3a:
+    endpoint: "http://minio:9000"
+    path_style_access: true
+    connection_ssl_enabled: false
+    impl: "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    fast_upload: true
+  # Delta Lake configuration
+  delta:
+    extensions: "io.delta.sql.DeltaSparkSessionExtension"
+    catalog: "spark_catalog"
+    catalog_impl: "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+
+# ─── Airflow DAGs ─────────────────────────────────────────────────────────────
+dags:
+  bronze_ingest:
+    schedule: "@monthly"
+    retries: 3
+    retry_delay_minutes: 5
+    execution_timeout_minutes: 30
+  silver_transform:
+    retries: 2
+    retry_delay_minutes: 10
+    execution_timeout_minutes: 60
+  gold_build:
+    retries: 1
+    retry_delay_minutes: 5
+    execution_timeout_minutes: 30
+
+# ─── Notifications (optional) ─────────────────────────────────────────────────
+notifications:
+  on_failure_email: []  # Add email addresses here
+  slack_webhook: ""     # Add Slack webhook URL here

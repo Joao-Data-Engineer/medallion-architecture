@@ -1,0 +1,108 @@
+{
+  "data_asset_type": null,
+  "expectation_suite_name": "silver_yellow_taxi_suite",
+  "expectations": [
+    {
+      "expectation_type": "expect_table_row_count_to_be_between",
+      "kwargs": { "min_value": 100000 },
+      "meta": { "notes": "After outlier removal, expect at least 100k valid trips per month" }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "pickup_datetime", "mostly": 1.0 }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "dropoff_datetime", "mostly": 1.0 }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "PULocationID", "mostly": 1.0 }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "DOLocationID", "mostly": 1.0 }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "fare_amount", "mostly": 1.0 }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "trip_duration_minutes", "mostly": 1.0 }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "pickup_borough", "mostly": 1.0 }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": { "column": "dropoff_borough", "mostly": 1.0 }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "fare_amount",
+        "min_value": 0.0,
+        "max_value": 500.0,
+        "mostly": 1.0
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "trip_duration_minutes",
+        "min_value": 1.0,
+        "max_value": 300.0,
+        "mostly": 1.0
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "trip_distance",
+        "min_value": 0.0,
+        "max_value": 150.0,
+        "mostly": 1.0
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "kwargs": {
+        "column": "pickup_borough",
+        "value_set": ["Manhattan", "Brooklyn", "Queens", "Bronx", "Staten Island", "EWR", "Unknown"]
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "kwargs": {
+        "column": "payment_type",
+        "value_set": [1, 2, 3, 4, 5, 6],
+        "mostly": 0.99
+      },
+      "meta": { "notes": "1=CC, 2=Cash, 3=No charge, 4=Dispute, 5=Unknown, 6=Voided" }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "tip_amount",
+        "min_value": 0.0,
+        "max_value": 200.0,
+        "mostly": 0.999
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "PULocationID",
+        "min_value": 1,
+        "max_value": 265,
+        "mostly": 1.0
+      }
+    }
+  ],
+  "meta": {
+    "great_expectations_version": "0.18.19",
+    "notes": "Silver layer expectations - strict. Failures quarantine the batch."
+  }
+}

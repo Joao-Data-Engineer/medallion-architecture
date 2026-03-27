@@ -1,0 +1,67 @@
+version: 2
+
+sources:
+  - name: silver
+    description: "Silver layer Delta Lake tables in MinIO — cleaned and enriched NYC taxi data"
+    schema: silver
+    tables:
+      - name: yellow_taxi
+        description: >
+          Cleaned, validated, and enriched NYC Yellow Taxi trip records.
+          Partitioned by year / month / pickup_borough.
+          Outliers removed, zone lookup joined, derived columns added.
+        columns:
+          - name: pickup_datetime
+            description: "Trip pickup timestamp"
+            tests:
+              - not_null
+          - name: dropoff_datetime
+            description: "Trip dropoff timestamp"
+            tests:
+              - not_null
+          - name: PULocationID
+            description: "TLC Taxi Zone ID for pickup location (1-265)"
+            tests:
+              - not_null
+          - name: DOLocationID
+            description: "TLC Taxi Zone ID for dropoff location (1-265)"
+            tests:
+              - not_null
+          - name: fare_amount
+            description: "Metered fare amount in USD"
+            tests:
+              - not_null
+          - name: pickup_borough
+            description: "NYC borough for pickup (Manhattan, Brooklyn, Queens, Bronx, Staten Island, EWR, Unknown)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ["Manhattan", "Brooklyn", "Queens", "Bronx", "Staten Island", "EWR", "Unknown"]
+          - name: trip_duration_minutes
+            description: "Computed trip duration in minutes"
+            tests:
+              - not_null
+          - name: year
+            description: "Partition column: year of pickup"
+            tests:
+              - not_null
+          - name: month
+            description: "Partition column: month of pickup (1-12)"
+            tests:
+              - not_null
+
+      - name: taxi_zones
+        description: "NYC TLC Taxi Zone lookup — 265 zones with borough and service zone"
+        schema: silver
+        columns:
+          - name: LocationID
+            description: "Zone ID (1-265)"
+            tests:
+              - not_null
+              - unique
+          - name: Borough
+            description: "NYC borough name"
+            tests:
+              - not_null
+          - name: Zone
+            description: "Zone name within the borough"

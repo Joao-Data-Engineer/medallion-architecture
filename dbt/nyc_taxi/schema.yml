@@ -1,0 +1,79 @@
+version: 2
+
+models:
+  - name: fct_hourly_zone_revenue
+    description: >
+      Revenue and trip metrics aggregated by pickup zone and hour of day.
+      Primary fact table for the Revenue Heatmap dashboard.
+      Grain: one row per (pickup_zone, hour_of_day, year, month).
+    columns:
+      - name: pickup_zone
+        description: "NYC TLC zone name for the trip pickup location"
+        tests:
+          - not_null
+      - name: hour_of_day
+        description: "Hour of the day (0-23) when the trip was picked up"
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
+      - name: trip_count
+        description: "Number of trips in this zone/hour combination"
+        tests:
+          - not_null
+      - name: total_revenue
+        description: "Sum of total trip revenue (fare + tip + surcharges) in USD"
+        tests:
+          - not_null
+      - name: year
+        tests:
+          - not_null
+      - name: month
+        tests:
+          - not_null
+
+  - name: fct_daily_borough_demand
+    description: >
+      Daily trip counts and revenue by NYC borough, with 7-day rolling averages.
+      Used for time-series trend analysis dashboard.
+      Grain: one row per (pickup_borough, pickup_date).
+    columns:
+      - name: pickup_borough
+        tests:
+          - not_null
+      - name: pickup_date
+        tests:
+          - not_null
+      - name: trip_count
+        tests:
+          - not_null
+      - name: trip_count_7d_avg
+        description: "7-day rolling average of daily trip count for this borough"
+
+  - name: dim_taxi_zones
+    description: "NYC TLC Taxi Zone dimension table — 265 zones."
+    columns:
+      - name: location_id
+        tests:
+          - not_null
+          - unique
+      - name: borough
+        tests:
+          - not_null
+      - name: zone_name
+        tests:
+          - not_null
+
+  - name: mart_payment_analysis
+    description: >
+      Tip rates and revenue by payment type, borough, and time of day.
+      Grain: one row per (payment_type, pickup_borough, time_of_day_bucket, year, month).
+    columns:
+      - name: payment_type
+        tests:
+          - not_null
+      - name: pickup_borough
+        tests:
+          - not_null
+      - name: avg_tip_pct
+        description: "Average tip as a percentage of fare amount (credit card trips only)"

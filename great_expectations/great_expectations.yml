@@ -1,0 +1,77 @@
+config_version: 3.0
+
+datasources:
+  bronze_s3_datasource:
+    class_name: Datasource
+    module_name: great_expectations.datasource
+    execution_engine:
+      class_name: PandasExecutionEngine
+      module_name: great_expectations.execution_engine
+    data_connectors:
+      default_inferred_data_connector_name:
+        class_name: InferredAssetS3DataConnector
+        module_name: great_expectations.datasource.data_connector
+        bucket: bronze
+        prefix: raw/yellow_taxi/
+        boto3_options:
+          endpoint_url: "${MINIO_ENDPOINT}"
+          aws_access_key_id: "${AWS_ACCESS_KEY_ID}"
+          aws_secret_access_key: "${AWS_SECRET_ACCESS_KEY}"
+
+  silver_s3_datasource:
+    class_name: Datasource
+    module_name: great_expectations.datasource
+    execution_engine:
+      class_name: PandasExecutionEngine
+      module_name: great_expectations.execution_engine
+    data_connectors:
+      default_inferred_data_connector_name:
+        class_name: InferredAssetS3DataConnector
+        module_name: great_expectations.datasource.data_connector
+        bucket: silver
+        prefix: yellow_taxi/
+        boto3_options:
+          endpoint_url: "${MINIO_ENDPOINT}"
+          aws_access_key_id: "${AWS_ACCESS_KEY_ID}"
+          aws_secret_access_key: "${AWS_SECRET_ACCESS_KEY}"
+
+stores:
+  expectations_store:
+    class_name: ExpectationsStore
+    store_backend:
+      class_name: TupleFilesystemStoreBackend
+      base_directory: /opt/airflow/great_expectations/expectations/
+
+  validations_store:
+    class_name: ValidationsStore
+    store_backend:
+      class_name: TupleS3StoreBackend
+      bucket: data-quality
+      prefix: gx-results/validations/
+      boto3_options:
+        endpoint_url: "${MINIO_ENDPOINT}"
+        aws_access_key_id: "${AWS_ACCESS_KEY_ID}"
+        aws_secret_access_key: "${AWS_SECRET_ACCESS_KEY}"
+
+  checkpoint_store:
+    class_name: CheckpointStore
+    store_backend:
+      class_name: TupleFilesystemStoreBackend
+      base_directory: /opt/airflow/great_expectations/checkpoints/
+
+  evaluation_parameter_store:
+    class_name: EvaluationParameterStore
+
+expectations_store_name: expectations_store
+validations_store_name: validations_store
+evaluation_parameter_store_name: evaluation_parameter_store
+checkpoint_store_name: checkpoint_store
+
+data_docs_sites:
+  local_site:
+    class_name: SiteBuilder
+    store_backend:
+      class_name: TupleFilesystemStoreBackend
+      base_directory: /opt/airflow/great_expectations/uncommitted/data_docs/local_site/
+    site_index_builder:
+      class_name: DefaultSiteIndexBuilder
