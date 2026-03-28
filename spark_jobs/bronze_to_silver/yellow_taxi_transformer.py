@@ -22,22 +22,28 @@ import os
 import sys
 from datetime import datetime
 
-import yaml
-from delta import configure_spark_with_delta_pip
-from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql import functions as F
-from pyspark.sql.types import IntegerType
+# Add parent directories to path when running as spark-submit job.
+# Airflow mounts at /opt/airflow; Spark worker mounts at /opt/spark/work-dir.
+for _base in ("/opt/airflow", "/opt/spark/work-dir"):
+    if os.path.isdir(_base) and _base not in sys.path:
+        sys.path.insert(0, _base)
 
-# Add parent directories to path when running as spark-submit job
-sys.path.insert(0, "/opt/spark/work-dir")
+import yaml  # noqa: E402
+from delta import configure_spark_with_delta_pip  # noqa: E402
+from pyspark.sql import DataFrame, SparkSession  # noqa: E402
+from pyspark.sql import functions as F  # noqa: E402
+from pyspark.sql.types import IntegerType  # noqa: E402
 
-from spark_jobs.bronze_to_silver.schema_definitions import (
+from spark_jobs.bronze_to_silver.schema_definitions import (  # noqa: E402
     AIRPORT_LOCATION_IDS,
     BRONZE_YELLOW_TAXI_SCHEMA,
     TAXI_ZONE_SCHEMA,
 )
-from spark_jobs.utils.delta_utils import get_or_create_delta_table, optimize_delta_table
-from spark_jobs.utils.metrics import PipelineMetrics
+from spark_jobs.utils.delta_utils import (  # noqa: E402
+    get_or_create_delta_table,
+    optimize_delta_table,
+)
+from spark_jobs.utils.metrics import PipelineMetrics  # noqa: E402
 
 
 def load_config() -> dict:  # pragma: no cover
