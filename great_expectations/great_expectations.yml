@@ -7,16 +7,29 @@ datasources:
     execution_engine:
       class_name: PandasExecutionEngine
       module_name: great_expectations.execution_engine
+      boto3_options:
+        endpoint_url: "${MINIO_ENDPOINT}"
+        aws_access_key_id: "${AWS_ACCESS_KEY_ID}"
+        aws_secret_access_key: "${AWS_SECRET_ACCESS_KEY}"
     data_connectors:
       default_inferred_data_connector_name:
         class_name: InferredAssetS3DataConnector
         module_name: great_expectations.datasource.data_connector
         bucket: bronze
         prefix: raw/yellow_taxi/
+        delimiter: ""
         boto3_options:
           endpoint_url: "${MINIO_ENDPOINT}"
           aws_access_key_id: "${AWS_ACCESS_KEY_ID}"
           aws_secret_access_key: "${AWS_SECRET_ACCESS_KEY}"
+        default_regex:
+          pattern: raw/(yellow_taxi)/year=(\d+)/month=(\d+)/yellow_tripdata_(\d+)-(\d+)\.parquet
+          group_names:
+            - data_asset_name
+            - year
+            - month
+            - file_year
+            - file_month
 
   silver_s3_datasource:
     class_name: Datasource
@@ -24,16 +37,25 @@ datasources:
     execution_engine:
       class_name: PandasExecutionEngine
       module_name: great_expectations.execution_engine
+      boto3_options:
+        endpoint_url: "${MINIO_ENDPOINT}"
+        aws_access_key_id: "${AWS_ACCESS_KEY_ID}"
+        aws_secret_access_key: "${AWS_SECRET_ACCESS_KEY}"
     data_connectors:
       default_inferred_data_connector_name:
         class_name: InferredAssetS3DataConnector
         module_name: great_expectations.datasource.data_connector
         bucket: silver
         prefix: yellow_taxi/
+        delimiter: ""
         boto3_options:
           endpoint_url: "${MINIO_ENDPOINT}"
           aws_access_key_id: "${AWS_ACCESS_KEY_ID}"
           aws_secret_access_key: "${AWS_SECRET_ACCESS_KEY}"
+        default_regex:
+          pattern: (.*part-.*)\.parquet
+          group_names:
+            - data_asset_name
 
 stores:
   expectations_store:
