@@ -1,5 +1,6 @@
 # Spark
 pyspark==3.5.1
+apache-airflow-providers-apache-spark==4.8.0
 
 # Delta Lake
 delta-spark==3.1.0
